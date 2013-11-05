@@ -52,7 +52,7 @@ public class ShoppingCartTest {
 //        _as.setDB("jdbc:db2://ec2-174-129-69-159.compute-1.amazonaws.com:5001/tuning");
         this.as.setDb("jdbc:db2://localhost:2121/tuning");
         this.as.setUserName("db2inst1");
-        this.as.setPassword("thebest1");
+        this.as.setPassword("db2");
     }
 
     @BeforeClass
