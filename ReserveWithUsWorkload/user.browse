@@ -1,0 +1,8 @@
+command=search_hotels&country=country1
+command=get_hotels
+command=search_hotels&country=country1&city=city2
+command=get_hotels
+command=search_hotels&distance_to_center=10&numrooms=1&date_start=2013-03-20&date_stop=2013-03-23
+command=get_hotels
+
+

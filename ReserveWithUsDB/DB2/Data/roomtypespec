@@ -1,0 +1,7 @@
+/ room_type_id	KEY
+/ hotel_id FOREIGN KEY
+/ room_type
+
+n 1.0
+n 50000
+type 10

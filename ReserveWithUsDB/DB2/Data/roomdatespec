@@ -1,0 +1,12 @@
+/ room_type_id  KEY     FOREIGN KEY
+/ single_day_date 		KEY
+/ numavail
+/ numtaken
+/ price
+
+
+n 300000
+d 31
+n 100
+n 0
+n 300.0 80.0

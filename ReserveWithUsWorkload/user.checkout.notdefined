@@ -1,0 +1,2 @@
+command=login&customer_id=111
+command=add_to_shopping_cart&customer_id=111&date_start=2013-04-03

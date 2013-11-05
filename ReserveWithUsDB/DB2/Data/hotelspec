@@ -1,0 +1,19 @@
+/ hotel_id			KEY
+/ name			
+/ street
+/ city
+/ zip_code
+/ state
+/ country
+/ rating
+/ distance_to_center
+
+n 1.0   
+hotel 1.0
+street 1.0
+city 250.0
+n 400.0
+state 50.0
+country 30.0
+n 5.0
+n 10.0    

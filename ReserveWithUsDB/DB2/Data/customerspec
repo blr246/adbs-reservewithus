@@ -1,0 +1,34 @@
+/			selectivity of point query | nb distinct values
+/ customer_id			KEY
+/ username varchar(30)		0.01%			10000.0
+/ password varchar(30)		0.1%			1000.0
+/ first_name varchar(30)	1%			100.0
+/ last_name varchar(30)		5%			20.0
+/ home_street varchar(30)	10%			10.0
+/ home_city varchar(30)		20%			5.0
+/ home_state varchar(30)	33%			3.0
+/ business_street varchar(30)	50%			2.0	   	
+/ business_city varchar(30)	
+/ business_state varchar(30)
+/ home_phone
+/ business_phone
+/ email
+/language
+
+n 1.0
+user 1.0
+password 1000.0
+first_name 100.0
+last_name 20.0
+home_street 10.0
+home_city 5.0
+n 1000
+home_state 3.0
+business_street 2.0
+business_city 1.0
+n 10000
+business_state 1.0
++ 1.0
++ 1.0
+email 1.0
+language 10.0

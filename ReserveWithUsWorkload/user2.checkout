@@ -1,0 +1,6 @@
+command=login&customer_id=112
+command=add_to_shopping_cart&customer_id=112&date_start=2013-05-01&date_stop=2013-05-08&total_price=150&room_type_id=1&numtaken=2
+command=checkout&customer_id=112
+command=logout&customer_id=112
+
+
