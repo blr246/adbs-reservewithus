@@ -1,0 +1,23 @@
+INTRODUCTION
+------------
+
+These data files are generated using the script query_data_commands.sh in the
+ReserveWithUsDB project. They are designed to provide input data for automated
+query generation used during benchmarking.
+
+
+USAGE
+-----
+
+The following steps are needed to use query data.
+
+Connect to the DB2 VM using
+  $ ssh -p 2222 db2inst1@localhost
+and then open a connection using
+  $ db2 connect to tuning
+Once connected, run
+  $ ./query_data_commands.sh
+while having an open database connection.
+
+To download the data, run from the host machine
+  $ scp -P 2222 db2inst1@localhost:~/*.csv ./query_data/
