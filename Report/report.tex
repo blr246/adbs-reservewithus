@@ -1,0 +1,68 @@
+\documentclass[letterpaper]{article}%
+\input{tex-util/misc.tex}
+\input{tex-util/figures.tex}
+\input{tex-util/homeworks.tex}
+\input{tex-util/listings.tex}
+\input{tex-util/math.tex}
+\input{tex-util/pagesetup.tex}
+
+\def\CourseTitle{Advanced Database Systems}
+\def\CourseNumber{CSCI-GA.2434-001}
+\def\Instructor{Prof. Dennis Shasha}
+\def\HomeworkSetNumber{2}
+
+\author{%
+  Brandon Reiss \& Kevin Mullin
+}
+
+\date{Tuesday, November 19th, 2013}
+\title{%
+  \CourseTitle{} - Homework \HomeworkSetNumber{} \\
+  {\large \Instructor{}} \\
+  {\large \CourseNumber{}}
+}
+
+\lhead{\CourseNumber{} - Problem Set \HomeworkSetNumber{}}
+\chead{}
+\rhead{Reiss \& Mullin, \thepage{} of \pageref{LastPage}}
+\fancyfoot{}
+
+\begin{document}
+\noindent
+\maketitle
+\thispagestyle{empty}
+
+\begin{problemcopy}
+ReserveWithUs is an electronic portal for hotel rooms. It buys rooms at
+discounted rates and sells them for a bit more (see hotels.com for a real-life
+model of such a company). The company is composed of a purchasing department
+that negotiates deals with hotels and a sales department that monitors customer
+activities. Each hotel has a few types of room (e.g., superior, king, queen).
+For each type of room in a given hotel, the purchasing department negotiates a
+block of rooms of a given type at a given price on a given day. Potential
+customers browse the web site to find attractive hotels and room deals.
+Possibly, they log in and add a (number of) rooms to their shopping cart.
+Customers can then buy all the rooms in their shopping cart, a so-called
+shopping cart checkout, where the information about the booked rooms are
+committed to the database and archived. You are the IT person at ReserveWithUs
+and you have been given a simple application server. The application server is
+written in Java (tested on Java 1.6). The application server together with the
+database schema and scripts to generate data is available at
+http://code.google.com/p/databasetuning-cases/. The design of the application
+server is described on that web site. The source code is available and you
+should take some time to familiarize yourself with it.
+
+Your job is to tune the database portion of the application in your environment
+and to redesign some portions of the application server that are poorly
+designed. Specifically, your project is to document the following tasks (back
+up your claims with arguments where possible with quantitative arguments based
+on experiments):
+\end{problemcopy}
+
+\section{Introduction}
+\subsection{Environment Setup}
+\section{Tuning}
+\subsection{Query on hotel and room based on country and city}
+
+\end{document}
+
