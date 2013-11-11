@@ -1,0 +1,27 @@
+####################
+hotel_times_no_opt.csv
+  Baseline benchmark
+
+hotel_times_hotel_index.csv
+  Benchmark after CLUSTERED index on HOTEL.(COUNTRY,CITY)
+
+benchmark_data/hotel_times_hotel_room_date_indexes.csv
+  Benchmark after CLUSTERED index on HOTEL.(COUNTRY,CITY) and ROOM_DATE.(SINGLE_DAY_DATE)
+
+####################
+room_times_no_opt.csv
+  Baseline benchmark
+
+benchmark_data/room_times_inside_out_only.csv
+  Benchmark with inside out query for rooms and no indexes
+
+room_times_hotel_index.csv
+  Benchmark after CLUSTERED index on HOTEL.(COUNTRY,CITY)
+
+benchmark_data/room_times_hotel_room_date_indexes.csv
+  Benchmark after CLUSTERED index on HOTEL.(COUNTRY,CITY) and ROOM_DATE.(SINGLE_DAY_DATE)
+
+benchmark_data/room_times_new_query_indexes_all.csv
+  Benchmark after CLUSTERED index on HOTEL.(COUNTRY,CITY) and ROOM_DATE.(SINGLE_DAY_DATE)
+  and inside out query for rooms
+
