@@ -1,0 +1,33 @@
+# It is much faster to filter by room_type_id first if the country and city are
+# given. These profiles were taken after indexing.
+# TODO: Obtain a new baseline with the reorganized query.
+
+$ time db2 select h.hotel_id, q.room_type_id, q.total_price from hotel h, room_type rde, \( select rda.room_type_id, sum\(rda.price\) as total_price from room_date rda where rda.numavail \> 0 and rda.single_day_date \>= \'2013-11-05\' and rda.single_day_date \< \'2013-11-09\' group by rda.room_type_id having count\(*\) = 4 \) q where h.hotel_id = rde.hotel_id and h.city = \'city10\' and h.country = \'country3\' and q.room_type_id = rde.room_type_id
+
+HOTEL_ID    ROOM_TYPE_ID TOTAL_PRICE
+----------- ------------ ---------------------------------
+      28636        17251                             1105.
+      28636        26903                              957.
+      28636       290787                              960.
+
+  3 record(s) selected.
+
+
+real    0m4.089s
+user    0m0.032s
+sys     0m0.040s
+
+$ time db2 select rda.room_type_id, sum\(rda.price\) from room_date rda, \( select rde.room_type_id from room_type rde, hotel h where h.hotel_id = rde.hotel_id and h.country = \'country3\' and h.city = \'city10\' \) q where rda.numavail \> 0 and rda.single_day_date \>= \'2013-11-05\' and rda.single_day_date \< \'2013-11-09\' and rda.room_type_id = q.room_type_id group by rda.room_type_id having count\(*\) = 4
+
+ROOM_TYPE_ID 2
+------------ ---------------------------------
+       17251                             1105.
+       26903                              957.
+      290787                              960.
+
+  3 record(s) selected.
+
+
+real    0m0.188s
+user    0m0.024s
+sys     0m0.032s

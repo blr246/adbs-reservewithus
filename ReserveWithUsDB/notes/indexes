@@ -1,0 +1,28 @@
+$ db2 => CREATE INDEX HOTEL_BY_CITY_COUNTRY ON HOTEL (COUNTRY, CITY) CLUSTER PCTFREE 10 COLLECT DETAILED STATISTICS
+DB20000I  The SQL command completed successfully.
+$ db2 => RUNSTATS ON TABLE HOTEL AND DETAILED INDEXES ALL
+DB20000I  The RUNSTATS command completed successfully.
+$ db2 => REORG TABLE HOTEL INDEX HOTEL_BY_CITY_COUNTRY ALLOW NO ACCESS INDEXSCAN
+DB20000I  The REORG command completed successfully.
+
+$ db2 => CREATE INDEX ROOM_BY_DATE ON ROOM_DATE (SINGLE_DAY_DATE ASC) CLUSTER PCTFREE 10 COLLECT SAMPLED DETAILED STATISTICS
+DB20000I  The SQL command completed successfully.
+$ db2 => RUNSTATS ON TABLE ROOM_DATE AND SAMPLED DETAILED INDEXES ALL
+DB20000I  The RUNSTATS command completed successfully.
+$ db3 => REORG TABLE ROOM_DATE INDEX ROOM_BY_DATE ALLOW NO ACCESS INDEXSCAN
+DB20000I  The REORG command completed successfully.
+
+$ db2pd -db tuning -reorg
+
+Database Member 0 -- Database TUNING -- Active -- Up 0 days 00:04:44 -- Date 2013-11-11-03.22.54.151273
+
+Table Reorg Information:
+Address            TbspaceID TableID PartID MasterTbs MasterTab TableName          Type    IndexID    TempSpaceID
+0x00007F5F7D583EF8 2         4       n/a    n/a       n/a       HOTEL              Offline 2          2
+0x00007F5F7D57FE78 2         6       n/a    n/a       n/a       ROOM_DATE          Offline 2          2
+
+Table Reorg Stats:
+Address            TableName          Start               End                 PhaseStart          MaxPhase   Phase      CurCount   MaxCount   Status  Completion
+0x00007F5F7D583EF8 HOTEL              11/11/2013 03:22:12 11/11/2013 03:22:17 11/11/2013 03:22:15 3          IdxRecreat 0          0          Done    0
+0x00007F5F7D57FE78 ROOM_DATE          11/11/2013 03:18:16 11/11/2013 03:20:37 11/11/2013 03:19:00 3          IdxRecreat 0          0          Done    0
+
