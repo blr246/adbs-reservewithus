@@ -34,49 +34,53 @@ class UserSession implements Runnable {
         PrintWriter out = null;
         BufferedReader in = null;
         try {
-            // Set up socket as stream
-            out = new PrintWriter(s.getOutputStream(), true);
-            in  = new BufferedReader(new InputStreamReader(s.getInputStream()));
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-
-        try {
-            // Request-response loop
-            UserCommand command;
-            String response;
-            while (true) {
-                command = parse_request(in);
-                if (command == null) break;
-                if (q != null && !command.isGet()) this.session.close(q.getCon());
-                response = execute_command(command);
-                out.println(response);
+            try {
+                // Set up socket as stream
+                out = new PrintWriter(s.getOutputStream(), true);
+                in  = new BufferedReader(new InputStreamReader(s.getInputStream()));
             }
-        } catch (IOException e) {
-            // Request is not OK
-            out.println("IOException: Request is incorrect");
-        } catch (SQLException e) {
-            out.println("SQL Exception: "+e.getMessage());
-        } catch (IllegalArgumentException e) {
-            out.println("Illegal Argument Exception: "+e.getMessage());
-        } catch (InterruptedException e) {
-            out.println("Checkout Wait Interruped: "+e.getMessage());
+            catch (IOException e) {
+                e.printStackTrace();
+                System.exit(1);
+            }
+
+            try {
+                // Request-response loop
+                UserCommand command;
+                String response;
+                while (true) {
+                    command = parse_request(in);
+                    if (command == null) break;
+                    if (q != null && !command.isGet()) this.session.close(q.getCon());
+                    response = execute_command(command);
+                    out.println(response);
+                }
+            } catch (IOException e) {
+                // Request is not OK
+                out.println("IOException: Request is incorrect");
+            } catch (SQLException e) {
+                out.println("SQL Exception: "+e.getMessage());
+            } catch (IllegalArgumentException e) {
+                out.println("Illegal Argument Exception: "+e.getMessage());
+            } catch (InterruptedException e) {
+                out.println("Checkout Wait Interruped: "+e.getMessage());
+            }
         }
         // cleanup
-        try {
-            if (q!=null) this.session.close(q.getCon());
-            out.println("bye.");
-            out.close();
-            in.close();
-            s.close();
-         }
-        catch (IOException e){
-            e.printStackTrace();
-        }
-        catch (SQLException e){
-            e.printStackTrace();
+        finally {
+            try {
+                if (q!=null) this.session.close(q.getCon());
+                out.println("bye.");
+                out.close();
+                in.close();
+                s.close();
+             }
+            catch (IOException e){
+                e.printStackTrace();
+            }
+            catch (SQLException e){
+                e.printStackTrace();
+            }
         }
     }
 
@@ -167,76 +171,112 @@ class UserSession implements Runnable {
     }
 
     public void login(int customer_id) throws SQLException {
-        Connection con = this.session.open();
-        // Check if user is already logged in
-        String sql_stmt = DB2SQLStatements.login_check(customer_id);
-        Statement stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_stmt);
-        rs.next();
-        int exists = rs.getInt(1);
-        if (exists != 0) {
-            System.out.println("Customer "+customer_id+" already logged in");
-        } else {
-            // start Transaction
-            con.setAutoCommit(false);
-            // get value from login_counter
-            sql_stmt = DB2SQLStatements.login_select_logcounter();
-            rs = stmt.executeQuery(sql_stmt);
+        Connection con = null;
+        try {
+            con = this.session.open();
+            // Check if user is already logged in
+            String sql_stmt = DB2SQLStatements.login_check(customer_id);
+            Statement stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql_stmt);
             rs.next();
-            int value = rs.getInt("value");
-            // insert customer_id, login_value into login
-            sql_stmt = DB2SQLStatements.login_insert(customer_id, value);
-            stmt.executeUpdate(sql_stmt);
-            // increment value from login_counter
-            value += 1;
-            // insert new value into login_counter
-            sql_stmt = DB2SQLStatements.login_increment_logcounter(value);
-            stmt.executeUpdate(sql_stmt);
-            // commit
-            con.commit();
+            int exists = rs.getInt(1);
+            if (exists != 0) {
+                System.out.println("Customer "+customer_id+" already logged in");
+            } else {
+                // start Transaction
+                con.setAutoCommit(false);
+                // get value from login_counter
+                sql_stmt = DB2SQLStatements.login_select_logcounter();
+                rs = stmt.executeQuery(sql_stmt);
+                rs.next();
+                int value = rs.getInt("value");
+                // insert customer_id, login_value into login
+                sql_stmt = DB2SQLStatements.login_insert(customer_id, value);
+                stmt.executeUpdate(sql_stmt);
+                // increment value from login_counter
+                value += 1;
+                // insert new value into login_counter
+                sql_stmt = DB2SQLStatements.login_increment_logcounter(value);
+                stmt.executeUpdate(sql_stmt);
+                // commit
+                con.commit();
+            }
+        } finally {
+            if (null != con) {
+                this.session.close(con);
+            }
         }
-        this.session.close(con);
 
     }
 
     public void logout(int customer_id) throws SQLException {
-        Connection con = this.session.open();
-        // Delete customer_id entry from login table
-        String sql_stmt = DB2SQLStatements.login_remove(customer_id);
-        Statement stmt = con.createStatement();
-        stmt.executeUpdate(sql_stmt);
-        this.session.close(con);
+        Connection con = null;
+        try {
+            con = this.session.open();
+            // Delete customer_id entry from login table
+            String sql_stmt = DB2SQLStatements.login_remove(customer_id);
+            Statement stmt = con.createStatement();
+            stmt.executeUpdate(sql_stmt);
+        } finally {
+            if (null != con) {
+                this.session.close(con);
+            }
+        }
     }
 
     public int customers_loggedin() throws SQLException {
-        Connection con = this.session.open();
-        String sql_stmt = DB2SQLStatements.login_count();
-        Statement stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_stmt);
-        rs.next();
-        int nb = rs.getInt(1);
-        this.session.close(con);
-        return nb;
+        Connection con = null;
+        try {
+            con = this.session.open();
+            String sql_stmt = DB2SQLStatements.login_count();
+            Statement stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql_stmt);
+            rs.next();
+            int nb = rs.getInt(1);
+            return nb;
+        } finally {
+            if (null != con) {
+                this.session.close(con);
+            }
+        }
     }
 
     public QueryHandle search_hotels(SearchCondition s) throws SQLException {
-        Connection con = this.session.open();
-        String sql_stmt = DB2SQLStatements.query_hotel(s);
-        System.out.println(sql_stmt);
-        Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
-                                      ResultSet.CONCUR_UPDATABLE);
-        ResultSet rs = stmt.executeQuery(sql_stmt);
-        return new QueryHandle(con,rs);
+        Connection con = null;
+        try {
+            con = this.session.open();
+            String sql_stmt = DB2SQLStatements.query_hotel(s);
+            System.out.println(sql_stmt);
+            Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                                          ResultSet.CONCUR_UPDATABLE);
+            ResultSet rs = stmt.executeQuery(sql_stmt);
+            QueryHandle ret = new QueryHandle(con,rs);
+            con = null;
+            return  ret;
+        } finally {
+            if (null != con) {
+                this.session.close(con);
+            }
+        }
     }
 
     public QueryHandle search_rooms(SearchCondition s) throws SQLException {
-        Connection con = this.session.open();
-        String sql_stmt = DB2SQLStatements.query_room(s);
-        Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
-                                      ResultSet.CONCUR_UPDATABLE);
-        System.out.println(sql_stmt);
-        ResultSet rs = stmt.executeQuery(sql_stmt);
-        return new QueryHandle(con,rs);
+        Connection con = null;
+        try {
+            con = this.session.open();
+            String sql_stmt = DB2SQLStatements.query_room(s);
+            Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE,
+                                          ResultSet.CONCUR_UPDATABLE);
+            System.out.println(sql_stmt);
+            ResultSet rs = stmt.executeQuery(sql_stmt);
+            QueryHandle ret = new QueryHandle(con,rs);
+            con = null;
+            return ret;
+        } finally {
+            if (null != con) {
+                this.session.close(con);
+            }
+        }
     }
 
     public Hotel[] get_hotels(QueryHandle u) throws SQLException {
@@ -271,33 +311,47 @@ class UserSession implements Runnable {
     }
 
     public void add_to_shopping_cart(ShoppingCartItem sci) throws IllegalArgumentException, SQLException {
-        // check customer is logged in
-        Connection  con = this.session.open();
-        String sql_stmt = DB2SQLStatements.login_check(sci.getCustomer_id());
-        Statement  stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_stmt);
-        rs.next();
-        int isLoggedIn = rs.getInt(1);
-        if (isLoggedIn == 0) throw new IllegalArgumentException("Customer not logged in");
+        Connection con = null;
+        try {
+            // check customer is logged in
+            con = this.session.open();
+            String sql_stmt = DB2SQLStatements.login_check(sci.getCustomer_id());
+            Statement  stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql_stmt);
+            rs.next();
+            int isLoggedIn = rs.getInt(1);
+            if (isLoggedIn == 0) throw new IllegalArgumentException("Customer not logged in");
 
-        // add item to shopping cart
-        ShoppingCart sc = new ShoppingCart(this.as, sci.getCustomer_id());
-        sc.add_item(sci);
+            // add item to shopping cart
+            ShoppingCart sc = new ShoppingCart(this.as, sci.getCustomer_id());
+            sc.add_item(sci);
+        } finally {
+            if (null != con) {
+                this.session.close(con);
+            }
+        }
     }
 
     public void checkout(int customer_id) throws SQLException, InterruptedException {
         // check customer is logged in
-        Connection  con = this.session.open();
-        String sql_stmt = DB2SQLStatements.login_check(customer_id);
-        Statement  stmt = con.createStatement();
-        ResultSet rs = stmt.executeQuery(sql_stmt);
-        rs.next();
-        int isLoggedIn = rs.getInt(1);
-        if (isLoggedIn == 0) throw new IllegalArgumentException("Customer not logged in");
+        Connection con = null;
+        try {
+            con = this.session.open();
+            String sql_stmt = DB2SQLStatements.login_check(customer_id);
+            Statement  stmt = con.createStatement();
+            ResultSet rs = stmt.executeQuery(sql_stmt);
+            rs.next();
+            int isLoggedIn = rs.getInt(1);
+            if (isLoggedIn == 0) throw new IllegalArgumentException("Customer not logged in");
 
-        // checkout
-        ShoppingCart sc = new ShoppingCart(this.as, customer_id);
-        sc.checkout();
+            // checkout
+            ShoppingCart sc = new ShoppingCart(this.as, customer_id);
+            sc.checkout();
+        } finally {
+            if (null != con) {
+                this.session.close(con);
+            }
+        }
     }
 
 

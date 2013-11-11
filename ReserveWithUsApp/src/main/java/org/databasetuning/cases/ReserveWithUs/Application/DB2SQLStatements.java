@@ -14,6 +14,9 @@
 package org.databasetuning.cases.ReserveWithUs.Application;
 
 import java.util.Date;
+import org.joda.time.DateTime;
+import org.joda.time.Days;
+
 /**
  *
  * @author philippe
@@ -97,63 +100,86 @@ class DB2SQLStatements {
         // (c) the number of rooms must be given
         if (cond.getNumrooms() < 1) throw new IllegalArgumentException("numrooms should be defined");
 
-        // construct the query
-        boolean add_and = false;
-        String query;
-        query = "select rda.room_type_id, min(rda.single_day_date) as date_start,"+
-                        "max(rda.single_day_date) as date_stop, "+cond.getNumrooms()+" as numrooms, sum(rda.price) as total_price "+
-                "from room_date rda";
-        query += " where ";
-        if (!cond.isPrice_maxNull()) {
-            if (add_and) query += " and ";
-            query+= "rda.price < "+cond.getPrice_max();
-            add_and = true;
-        }
-        if (cond.isNumroomsNull()) {
-            if (add_and) query += " and ";
-            query += "rda.numavail > 0";
-            add_and = true;
-        } else {
-            if (add_and) query += " and ";
-            query += "rda.numavail >= "+cond.getNumrooms();
-            add_and = true;
-        }
-        if (add_and) query += " and ";
-        // forces consecutive days in booking period
-        // date interval of the form [date_start, date_stop[
-        query+= "rda.single_day_date >= '"+cond.getDate_start()+"' and "+
-                "rda.single_day_date < '"+cond.getDate_stop()+"' "+
-                "group by rda.room_type_id having count(*) = (days('"+cond.getDate_stop()+"') - days('"+cond.getDate_start()+"'))";
-
-        
-        String outquery;
-        outquery = "select h.hotel_id, rde.room_type, q.room_type_id, q.date_start, q.date_stop, " +
-                          "q.numrooms, q.total_price "+
-                   "from hotel h, room_type rde, ("+query+") q "+
-                   "where h.hotel_id = rde.hotel_id and q.room_type_id = rde.room_type_id";
-        add_and = true;
+        // First build the hotels filter. This is the minimal set of
+        // room_type_id used to query the room_date table looking for
+        // contiguous ranges of hotel dates. It is much faster to filter by
+        // hotel prior to searching for dates.
+        final StringBuilder hotelFilterBuilder =
+            new StringBuilder(
+                    "select h.hotel_id, rde.room_type, rde.room_type_id ")
+            .append("from hotel h, room_type rde ")
+            .append("where h.hotel_id = rde.hotel_id");
+        boolean add_and = true;
         if (!cond.isCityNull()) {
-            if (add_and) outquery += " and ";
-            outquery += "h.city = '"+cond.getCity()+"'";
+            if (add_and) hotelFilterBuilder.append(" and ");
+            hotelFilterBuilder.append("h.city = '")
+                .append(cond.getCity()).append("'");
             add_and = true;
         }
         if (!cond.isCountryNull()) {
-            if (add_and) outquery += " and ";
-            outquery += "h.country = '"+cond.getCountry()+"'";
+            if (add_and) hotelFilterBuilder.append(" and ");
+            hotelFilterBuilder.append("h.country = '")
+                .append(cond.getCountry()).append("'");
             add_and = true;
         }
         if (!cond.isRoom_typeNull()) {
-            if (add_and) outquery += " and ";
-            outquery += "rde.room_type = '"+cond.getRoom_type()+"'";
+            if (add_and) hotelFilterBuilder.append(" and ");
+            hotelFilterBuilder.append("rde.room_type = '")
+                .append(cond.getRoom_type()).append("'");
             add_and = true;
         }
         if (!cond.isDistance_to_centerNull()) {
-            if (add_and) query += " and ";
-            query+= "h.distance_to_center < "+cond.getDistance_to_center();
+            if (add_and) hotelFilterBuilder.append(" and ");
+            hotelFilterBuilder.append("h.distance_to_center < ")
+                .append(cond.getDistance_to_center());
             add_and = true;
         }
 
-         return outquery;
+        // Query contiguous ranges of room_date.single_day_date using the
+        // filtered hotel room_type_id query.
+        final StringBuilder roomQueryBuilder =
+            new StringBuilder(
+                    "select q.hotel_id, q.room_type, q.room_type_id, ")
+            .append("min(rda.single_day_date) as date_start, ")
+            .append("max(rda.single_day_date) as date_stop, ")
+            .append(cond.getNumrooms()).append(" as numrooms, ")
+            .append("sum(rda.price) as total_price " +
+                    "from room_date rda, ")
+            .append("(").append(hotelFilterBuilder.toString()).append(") q ")
+            .append("where ");
+        add_and = false;
+        if (!cond.isPrice_maxNull()) {
+            if (add_and) roomQueryBuilder.append(" and ");
+            roomQueryBuilder.append("rda.price < ").append(cond.getPrice_max());
+            add_and = true;
+        }
+        if (cond.isNumroomsNull()) {
+            if (add_and) roomQueryBuilder.append(" and ");
+            roomQueryBuilder.append("rda.numavail > 0");
+            add_and = true;
+        } else {
+            if (add_and) roomQueryBuilder.append(" and ");
+            roomQueryBuilder.append("rda.numavail >= ").append(cond.getNumrooms());
+            add_and = true;
+        }
+        // Get the day range [start, stop) and match the hotel filter on
+        // room_type_id.
+        final DateTime start = new DateTime(cond.getDate_start());
+        final DateTime stop = new DateTime(cond.getDate_stop());
+        final int daysBetween = Days.daysBetween(start, stop).getDays();
+        if (add_and) roomQueryBuilder.append(" and ");
+        roomQueryBuilder
+            .append("rda.single_day_date >= '").append(cond.getDate_start()).append("'")
+            .append(" and ")
+            .append("rda.single_day_date < '").append(cond.getDate_stop()).append("'")
+            .append(" and ")
+            .append("rda.room_type_id = q.room_type_id ")
+            .append("group by (q.hotel_id, q.room_type, q.room_type_id) ")
+            .append("having count(single_day_date) = ")
+            .append(daysBetween);
+        final String query = roomQueryBuilder.toString();
+
+        return roomQueryBuilder.toString();
     }
 
     public static String query_hotel(SearchCondition cond)

@@ -100,7 +100,7 @@ def send_commands(commands, host=None, port=None, timeout=5):
                 p.terminate()
                 raise EnvironmentError('Timeout waiting for commands to complete.')
             else:
-                time.sleep(0.1)
+                time.sleep(0.001)
 
     # Check return code.
     if p.wait() != 0:
@@ -146,11 +146,11 @@ class ReserveWithUsAppSession(object):
 
     @property
     def stdout(self):
-        return self._stdout
+        return self._process.stdout
 
     @property
     def stderr(self):
-        return self._stderr
+        return self._process.stderr
 
     @property
     def isrunning(self):
@@ -257,7 +257,7 @@ def mode_test_i_hotels(rwu_jar_path, num_queries):
 
             # Run command and append elapsed time.
             with Timer() as timer:
-                result = send_commands([query, 'command=get_hotels'])
+                result = send_commands([query, 'command=get_hotels'], timeout=20)
             hotel_times.append(timer.elapsed)
 
             print query
@@ -307,7 +307,7 @@ def mode_test_i_rooms(rwu_jar_path, num_queries):
 
             # Run command and append elapsed time.
             with Timer() as timer:
-                result = send_commands([query, 'command=get_rooms'], timeout=15)
+                result = send_commands([query, 'command=get_rooms'], timeout=20)
             rooms_times.append(timer.elapsed)
 
             print query
@@ -323,4 +323,38 @@ def test_simple(rwu_jar_path):
         print send_commands(
                 ['command=search_rooms&country=country3&numrooms=1&'
                     'date_start=2013-11-05&date_stop=2013-11-09',
-                    'command=get_rooms'])
+                    'command=get_rooms'], timeout=20)
+
+def save_times_to_csv(times, outfile):
+    '''
+    Save a list of times to CSV.
+
+    Parameters
+    ----------
+    times : list of float
+        Times to save to CSV file.
+    outfile : file or path string
+        File to write to.
+    '''
+
+    if isinstance(outfile, str):
+        outfile = open(outfile, 'w')
+
+    csvwriter = csv.writer(outfile)
+    csvwriter.writerows([time] for time in times)
+
+def load_times_from_csv(infile):
+    '''
+    Load a list of times from CSV.
+
+    Parameters
+    ----------
+    infile : file or path string
+        File to read times from.
+    '''
+
+    if isinstance(infile, str):
+        infile = open(infile, 'r')
+
+    return [float(row[0]) for row in csv.reader(infile)]
+
