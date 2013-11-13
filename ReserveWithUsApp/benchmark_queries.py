@@ -2,8 +2,6 @@
 Run ReserveWithUsApp benchmarks using Python.
 '''
 import subprocess
-import argparse
-import StringIO
 import time
 import csv
 import numpy as np
@@ -21,7 +19,7 @@ class Timer(object):
         return self
 
 
-    def __exit__(self, type, value, traceback):
+    def __exit__(self, exc_type, value, traceback):
         self._t_stop = time.time()
 
     @property
