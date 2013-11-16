@@ -40,6 +40,8 @@
 \rhead{Reiss \& Mullin, \thepage{} of \pageref{LastPage}}
 \fancyfoot{}
 
+\parindent0pt \parskip8pt % make block paragraphs
+
 \begin{document}
 \noindent
 \maketitle
@@ -102,7 +104,7 @@ environment:}
   \item Create a VirtualBox VM and install Ubuntu Server Edition 12.04 LTS
 
   \item Install IBM DB2 Server 10.5
-    \begin{Verbatim}
+    \begin{Verbatim}[frame=single]
 # CONNECTING TO THE VM
 # --------------------
 # Setup Port Forwarding rule tcp,,2222,,22
@@ -148,7 +150,7 @@ $ sudo ./db2setup
     }{\texttt{m2-install-db2jcc.sh}} was created in order to install a local
     repository for the DB2Jcc Java DB2 Driver. After conversion to Maven, the
     project may be built and run in two simple steps:
-    \begin{Verbatim}
+    \begin{Verbatim}[frame=lines]
 $ mvn package
 $ java -jar target/ReserveWithUsApp-1.0.jar
     \end{Verbatim}
@@ -227,7 +229,7 @@ Benchmarks are executed using the \texttt{iPython} REPL. The advantage over a
 command-line application is more rapid prototyping. The following code listing
 shows an example usage of the benchmark tool.
 
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 $ ipython
 In [1]: import numpy as np
 In [2]: import benchmark_queries as bq
@@ -325,10 +327,20 @@ using the benchmarking script. These plots are both visible under the title
 ``NO OPTIMIZATION'' in Figure~\ref{fig:hotelqueries} for hotel queries and
 Figure~\ref{fig:roomqueries} for room queries. Immediately from this baseline
 it is clear that the room query is the bottleneck. On the dated hardware used
-for testing, the hotel queries take approximately 250ms while the room queries
-take approximately 4.5s with some queries taking over 20s.
+for testing, the median response time for hotel queries is approximately 250ms
+while median response time for room queries is approximately 4.57s with some
+queries taking over 20s.
 
 \subsubsection{Optimizing the hotel table}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.66\textwidth]{../ReserveWithUsApp/benchmark_data/0.png}
+  \caption{Distribution of hotel query response times. Each plot corresponds to
+    performance data collected after applying some subset of the proposed
+    optimizations.}
+  \label{fig:hotelqueries}
+\end{figure}
 
 The customer has specified that queries on hotel by \texttt{(CITY, COUNTRY)}
 are the most frequent. Assuming that ReserveWithUs is reasonably mature as a
@@ -344,7 +356,7 @@ since there are only 7216 unique \texttt{(CITY, COUNTRY)} pairs and index data
 structures tend to favor a large fanout.
 
 We create the index by running the following commands:
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 $ db2 CREATE INDEX HOTEL_BY_CITY_COUNTRY ON HOTEL (COUNTRY, CITY) CLUSTER PCTFRE
 E 10 COLLECT DETAILED STATISTICS
 DB20000I  The SQL command completed successfully.
@@ -357,7 +369,7 @@ The \texttt{REORG TABLE} command is used to force DB2 to reorder physically the
 data on disk. The \texttt{RUNSTATS} command updates the query optimizer so that
 it may use the new index. We can confirm the reorganization of the table data
 using the \texttt{db2pd} utility:
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 $ db2pd -db tuning -reorg
 Database Member 0 -- Database TUNING -- Active -- Up 0 days 00:04:44 -- Date 201
 3-11-11-03.22.54.151273
@@ -381,15 +393,24 @@ This negligible gain is likely because there are only 50000 unique hotel
 entries, which is small by database standards.
 
 A larger gain is observable in Figure~\ref{fig:roomqueries} for the response
-time distribution of room queries. The plot in the upper-left-hand frame shows
-response times have a much smaller variance when using the hotel clustered
-index compared to no optimization. When optimizing websites and other
-user-facing experiences, the higher percentiles of the response time
-distribution are important because the longest wait times can drive customers
-away while a slightly larger average response time with smaller variance may
-not.
+time distribution of room queries. The median response time is 3.45s down from
+4.57s. The plot in the upper-left-hand frame shows response times have a much
+smaller variance when using the hotel clustered index compared to no
+optimization. When optimizing websites and other user-facing experiences, the
+higher percentiles of the response time distribution are important because the
+longest wait times can drive customers away while a slightly larger average
+response time with smaller variance may not.
 
 \subsubsection{Optimizing the room table}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\textwidth]{../ReserveWithUsApp/benchmark_data/1.png}
+  \caption{Distribution of room query response times. Each plot corresponds to
+    performance data collected after applying some subset of the proposed
+    optimizations.}
+  \label{fig:roomqueries}
+\end{figure}
 
 Looking at the format of the room query makes clear that the bulk of the
 processing time is spent finding contiguous ranges of available
@@ -407,7 +428,7 @@ less forward in time allowing the table to extend to new dates as sales staff
 purchase inventory for upcoming dates.
 
 We create the index by running the following commands:
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 $ db2 CREATE INDEX ROOM_BY_DATE ON ROOM_DATE (SINGLE_DAY_DATE ASC) CLUSTER PCTFR
 EE 10 COLLECT SAMPLED DETAILED STATISTICS
 DB20000I  The SQL command completed successfully.
@@ -418,7 +439,7 @@ DB20000I  The REORG command completed successfully.
 \end{Verbatim}
 We can confirm the reorganization of the table data using the \texttt{db2pd}
 utility:
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 $ db2pd -db tuning -reorg
 Database Member 0 -- Database TUNING -- Active -- Up 0 days 00:04:44 -- Date
 2013-11-11-03.22.54.151273
@@ -448,8 +469,9 @@ with or without the indexes. As discussed already, this is likely due to the
 small number of hotel rows.
 
 The results in Figure~\ref{fig:roomqueries} for room queries show a nearly
-$2\times$ gain pushing the median response time down to around 2s from 4s with
-a much smaller variance. The longest queries went from 22s down to 11s.
+$2\times$ gain over the hotel index alone by pushing the median response time
+down to around 1.45s from 3.45s. The 99th percentile of queries went from
+10.34s down to 9.07s.
 
 \subsubsection{Inverting the room query}
 
@@ -462,7 +484,7 @@ range to find hotels with contiguous availability.
 
 The following test case demonstrates the impressive performance gains possible
 by inverting the query:
-\begin{Verbatim}
+\begin{Verbatim}[frame=single]
 $ time db2 select h.hotel_id, q.room_type_id, q.total_price from hotel h,
 room_type rde, \( select rda.room_type_id, sum\(rda.price\) as total_price from
 room_date rda where rda.numavail \> 0 and rda.single_day_date \>=
@@ -513,10 +535,12 @@ https://github.com/blr246/adbs-reservewithus/commit/4662879ee3443dcf48e1a692aed9
 
 Since the room query has nothing to do with hotel-only queries, we examine only
 the response times in Figure~\ref{fig:roomqueries} for room queries. The final
-result in the lower-left-hand corner is an impressive \textless{}1s median response time
-down from about 4s initially. In addition, the wide variance has all but
-vanished entirely. This is definitely a satisfactory result since the room
-query has a response time only slightly greater than the hotel query.
+result in the lower-left-hand corner is an impressive 443ms median response
+time down from 4.57s initially. In addition, the wide variance has all but
+vanished entirely with the 99th percentile of queries taking 868ms down from
+over 20s.  This is definitely a satisfactory result since the room query has a
+response time just under $4\times$ greater than the hotel query rather than
+$18\times$ greater as it was initially.
 
 One interesting note is that, prior to adding the indexes, the inversion of the
 room query succeeds in reducing the variance in room query response time while
@@ -526,36 +550,232 @@ query'', and it serves as further evidence that the indexes are a critical
 piece of this tuning recipe. A likely explanation is that indexes enable
 efficient scans of subsets of relevant hotel and room table rows.
 
-\begin{figure}[ht]
+\begin{figure}[h!]
   \centering
-  \includegraphics[width=0.66\textwidth]{../ReserveWithUsApp/benchmark_data/0.png}
-  \caption{Distribution of hotel query response times. Each plot corresponds to
-    performance data collected after applying some subset of the proposed
-    optimizations.}
-  \label{fig:hotelqueries}
-\end{figure}
-
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=\textwidth]{../ReserveWithUsApp/benchmark_data/1.png}
-  \caption{Distribution of room query response times. Each plot corresponds to
-    performance data collected after applying some subset of the proposed
-    optimizations.}
-  \label{fig:roomqueries}
+  \includegraphics[width=0.5\textwidth]{../ReserveWithUsApp/benchmark_data/room_times_mbp.png}
+  \caption{Distribution of room query response times.}
+  \label{fig:roomqueriesmbp}
 \end{figure}
 
 An additional order of magnitude speedup is possible using modern hardware as
 we see in Figure~\ref{fig:roomqueriesmbp}. The data are from a benchmark of
 room queries run using the same virtual machine on a recent MacBook Pro with a
 2.3GHz Intel Core i7 processor. The median response time for room queries is
-around 70ms compared to about 425ms for the weaker hardware.
+around 69ms compared to 443ms for the weaker hardware, and the 99th percentile
+of queries takes 98ms down from 868ms.
 
-\begin{figure}[ht]
-  \centering
-  \includegraphics[width=0.5\textwidth]{../ReserveWithUsApp/benchmark_data/room_times_mbp.png}
-  \caption{Distribution of room query response times.}
-  \label{fig:roomqueriesmbp}
-\end{figure}
+\subsection{Exporting and importing the customer table}
+
+Exporting and importing an existing table is useful in the case when the
+database system has been running for a while and so could benefit from
+reorganizing the physical layout of the data on the storage media. A common
+factor leading to performance degradations is the existence of overflow pages
+since they decrease index performance. Reinitializing a table can give the
+database system the opportunity to create a table using an optimal layout for
+the data.
+
+\subsubsection{Using \texttt{LOAD} and \texttt{EXPORT}}
+
+One of the simplest mechanisms for exporting data is to write the table to disk
+using the \texttt{EXPORT} command and then \texttt{LOAD} the saved data with a
+\texttt{REPLACE} instruction that causes the database system to delete the
+existing table and replace it.
+
+The following is an example \texttt{EXPORT} operation on the \texttt{CUSTOMER}
+table containing 1000000 rows.
+\begin{Verbatim}[frame=single]
+$ time db2 EXPORT TO customer.ixf OF IXF SELECT \* FROM CUSTOMER
+SQL3132W  The character data in column "PASSWORD" will be truncated to size
+"32700".
+
+SQL3104N  The Export utility is beginning to export data to file
+"customer.ixf".
+
+SQL3105N  The Export utility has finished exporting "1000000" rows.
+
+
+Number of rows exported: 1000000
+
+
+real    0m52.824s
+user    0m0.004s
+sys 0m0.012s
+\end{Verbatim}
+Notice that we use the \texttt{IXF} output format because the binary data are
+more efficient on disk than a human-readable format. This is important for
+enabling faster export and import performance because there are fewer bytes to
+read and write.
+
+The following is an example \texttt{LOAD} operation on the \texttt{CUSTOMER}
+table containing 1000000 rows.
+\begin{Verbatim}[frame=single]
+$ time db2 LOAD FROM customer.ixf OF IXF REPLACE INTO CUSTOMER
+SQL3501W  The table space(s) in which the table resides will not be placed in
+backup pending state since forward recovery is disabled for the database.
+
+SQL3109N  The utility is beginning to load data from file
+"/home/db2inst1/customer.ixf".
+
+SQL3500W  The utility is beginning the "LOAD" phase at time "11/16/2013
+14:41:54.111712".
+
+SQL3150N  The H record in the PC/IXF file has product "DB2    02.00", date
+"20131116", and time "133016".
+
+SQL3153N  The T record in the PC/IXF file has name "customer.ixf", qualifier
+"", and source "            ".
+
+SQL3519W  Begin Load Consistency Point. Input record count = "0".
+
+SQL3520W  Load Consistency Point was successful.
+
+SQL3110N  The utility has completed processing.  "1000000" rows were read from
+the input file.
+
+SQL3519W  Begin Load Consistency Point. Input record count = "1000000".
+
+SQL3520W  Load Consistency Point was successful.
+
+SQL3515W  The utility has finished the "LOAD" phase at time "11/16/2013
+14:41:57.183472".
+
+SQL3500W  The utility is beginning the "BUILD" phase at time "11/16/2013
+14:41:57.186797".
+
+SQL3213I  The indexing mode is "REBUILD".
+
+SQL3515W  The utility has finished the "BUILD" phase at time "11/16/2013
+14:41:57.795943".
+
+
+Number of rows read         = 1000000
+Number of rows skipped      = 0
+Number of rows loaded       = 1000000
+Number of rows rejected     = 0
+Number of rows deleted      = 0
+Number of rows committed    = 1000000
+
+
+real    0m3.868s
+user    0m0.004s
+sys 0m0.004s
+\end{Verbatim}
+
+The downsides to this approach are that
+\begin{enumerate}[1.]
+  \item the service or product must incur mandatory downtime in order to avoid
+    data loss for records added after the \texttt{EXPORT} is initiated
+  \item the \texttt{EXPORT} and \texttt{LOAD} operations incur heavy disk read
+    and write costs and fail to make use of memory and shared resources within
+    the core database system architecture
+\end{enumerate}
+
+\subsubsection{Using \texttt{REORG TABLE}}
+
+The DB2 database system has a command called \texttt{REORG TABLE} that can
+perform and in-place table reorganizing using internal database scratch space.
+The procedure is similar to \texttt{EXPORT} and \texttt{LOAD REPLACE} except
+that the operation does not require mandatory downtime, it can be paused and
+resumed, it has a utility \texttt{REORGCHK} that verifies whether or not
+reorganization is needed, and it uses optimizations internal to the database
+system.
+
+An example \texttt{REORGCHK} run follows.
+\begin{Verbatim}[frame=single]
+$ time db2 REORGCHK UPDATE STATISTICS ON TABLE CUSTOMER
+
+Doing RUNSTATS ....
+
+
+Table statistics:
+
+F1: 100 * OVERFLOW / CARD < 5
+F2: 100 * (Effective Space Utilization of Data Pages) > 70
+F3: 100 * (Required Pages / Total Pages) > 80
+
+SCHEMA.NAME                     CARD     OV     NP     FP ACTBLK    TSIZE  F1  F
+2  F3 REORG
+--------------------------------------------------------------------------------
+--------
+Table: DB2INST1.CUSTOMER
+                             1000000      0  66703  66704      - 2.62e+08   0  9
+7 100 ---
+--------------------------------------------------------------------------------
+--------
+
+Index statistics:
+
+F4: CLUSTERRATIO or normalized CLUSTERFACTOR > 80
+F5: 100 * (Space used on leaf pages / Space available on non-empty leaf pages) >
+MIN(50, (100 - PCTFREE))
+F6: (100 - PCTFREE) * (Amount of space available in an index with one less level
+/ Amount of space required for all keys) < 100
+F7: 100 * (Number of pseudo-deleted RIDs / Total number of RIDs) < 20
+F8: 100 * (Number of pseudo-empty leaf pages / Total number of leaf pages) < 20
+
+SCHEMA.NAME                 INDCARD  LEAF ELEAF LVLS  NDEL    KEYS LEAF_RECSIZE 
+NLEAF_RECSIZE LEAF_PAGE_OVERHEAD NLEAF_PAGE_OVERHEAD  PCT_PAGES_SAVED  F4  F5  F
+6  F7  F8 REORG
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+---------------
+Table: DB2INST1.CUSTOMER
+Index: SYSIBM.SQL131111162740540
+                            1000000  4167     0    3     0 1000000            4 
+            4                710                 710                0   0  99   
+3   0   0 *----
+--------------------------------------------------------------------------------
+--------------------------------------------------------------------------------
+---------------
+
+CLUSTERRATIO or normalized CLUSTERFACTOR (F4) will indicate REORG is necessary
+for indexes that are not in the same sequence as the base table. When multiple
+indexes are defined on a table, one or more indexes may be flagged as needing
+REORG.  Specify the most important index for REORG sequencing.
+
+Tables defined using the ORGANIZE BY clause and the corresponding dimension
+indexes have a '*' suffix to their names. The cardinality of a dimension index
+is equal to the Active blocks statistic of the table.
+
+
+real    0m2.559s
+user    0m0.008s
+sys 0m0.004s
+\end{Verbatim}
+
+Here we see that formulas \texttt{F1, F2, F3, F5, F6, F7, F8} were all within
+bounds as indicated by the `\texttt{-}' characters whereas the formula
+\texttt{F4} is out of bounds as indicated by the `\texttt{*}'. This case calls
+for \texttt{INDEX} reorganization as per the DB2 documentation.
+
+The following command performs \texttt{INDEX} reorganization on the
+\texttt{CUSTOMER} table.
+\begin{Verbatim}[frame=single]
+$ time db2 REORG INDEXES ALL FOR TABLE CUSTOMER ALLOW WRITE ACCESS REBUILD
+DB20000I  The REORG command completed successfully.
+
+real    0m3.057s
+user    0m0.000s
+sys 0m0.012s
+\end{Verbatim}
+
+This mechanism offers all of the advantages of \texttt{EXPORT} and
+\texttt{LOAD} in one integrated command that allows the option to maintain
+read/write access with degraded performance if mandatory downtime is not
+possible.
+
+\subsubsection{Using table clones}
+
+The most ideal method for exporting and importing the \texttt{CUSTOMER} table is
+using the \texttt{ALTER TABLE ADD CLONE} command available only for DB2 on IBM
+z/OS. This command is documented \href{%
+  http://publib.boulder.ibm.com/infocenter/dzichelp/v2r2/index.jsp?topic=%2Fcom.ib%
+  m.db2z10.doc.admin%2Fsrc%2Ftpc%2Fdb2z_createclonetable.htm%
+}{here}, and it is not available under our current system configuration. The
+\texttt{CLONE} feature pairs with the \texttt{EXCHANGE TABLE} command, also not
+available, which performs an efficient swap operation between cloned tables.
+
+\subsection{Optimizing checkout}
 
 \end{document}
 
