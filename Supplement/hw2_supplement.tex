@@ -1,0 +1,247 @@
+\documentclass[letterpaper]{article}%
+\input{tex-util/misc.tex}
+\input{tex-util/figures.tex}
+\input{tex-util/homeworks.tex}
+\input{tex-util/listings.tex}
+\input{tex-util/math.tex}
+\input{tex-util/pagesetup.tex}
+
+\def\CourseTitle{Advanced Database Systems}
+\def\CourseNumber{CSCI-GA.2434-001}
+\def\Instructor{Prof. Dennis Shasha}
+\def\HomeworkSetNumber{2}
+
+\author{%
+  Brandon Reiss \& Kevin Mullin
+}
+
+\date{Tuesday, November 19th, 2013}
+\title{%
+  \CourseTitle{} - Homework \HomeworkSetNumber{} Supplement \\
+  {\large \Instructor{}} \\
+  {\large \CourseNumber{}}
+}
+
+\lhead{\CourseNumber{} - Problem Set \HomeworkSetNumber{}}
+\chead{}
+\rhead{Reiss \& Mullin, \thepage{} of \pageref{LastPage}}
+\fancyfoot{}
+
+\begin{document}
+\noindent
+\maketitle
+\thispagestyle{empty}
+
+\begin{enumerate}[1.]
+    \begin{problemcopy} \item The Undo, No Redo algorithm has the following
+        description: Transactions First transfer before-images of each page to
+        the audit trail and then put the after-images in the database.
+
+        Suppose we changed it so that we transfer the after-image to the
+        database before putting the before image to the audit train. Will this
+        be correct? Prove your answer.
+    \end{problemcopy}
+
+    \begin{problemcopy} \item Suppose that a transaction manager has done the
+        following steps in the two phase commit protocol for a transaction T:
+        \begin{enumerate}[(a)]
+          \item It has asked all servers whether they are willing to commit and
+            they all responded affirmatively.
+          \item It has told all servers to commit, but has not waited for a
+            response.
+        \end{enumerate}
+        Does the transaction manager still need to keep a record of transaction
+        T? If not, why not? If so, for how long?
+    \end{problemcopy}
+
+    \begin{problemcopy} \item Suppose we are trying to decide whether to put a
+        non-clustering index on attribute B for relation R to support equality
+        selections on B. The relation has 10 million records. Each page can
+        store 10 records. There are 10,000 different values of B. A sequential
+        scan will fetch 10 pages per read. Explain why you would or would not
+        want to include a non-clustering index.
+    \end{problemcopy}
+
+    Given that R has 10,000,000 records and each read of 10 pages can fetch 100
+    records at 10 records per page, a full scan of R takes 100,000 reads.
+
+    There are two main possibilities affecting our use of a non-clustering
+    index on R.
+
+    \begin{enumerate}[i)]
+      \item \textbf{The values of B are distributed approximately uniformly.}
+        In the case when the distinct values of B are distributed evenly over
+        the records of R, each distinct value of B will have approximately
+        1,000 records. In this case, we expect a non-clustering index to
+        outperform a sequential scan when there are fewer than 100 equality
+        selections on distinct values of B since that will require access to
+        fewer than 100,000 records.
+        
+        The reason that we look at records rather than pages in this case is
+        because the most degenerate case is when each row of R matched by the
+        equality selection on B lies on a distinct page, and so we are forced
+        to perform a read for every row. The non-clustering index does not make
+        any guarantees about co-locality of records on shared pages.
+
+      \item \textbf{The values of B are distributed non-uniformly.} There are
+        many types of distributions with a high degree of skew that could
+        induce a very large number of disk reads for certain equality
+        selections on B. The proper strategy depends on the nature of the
+        distribution.
+        
+        The most skewed distribution possible is the one in which all but one
+        distinct value of B matches 1 record and then the final distinct value
+        of B matches 9,990,001 records. If the heavily loaded value of B is
+        unlikely to appear in an equality selection, then this skewed
+        distribution is great for a non-clustering index since it is impossible
+        to exceed 100,000 reads if we avoid the value of B having 9,990,001
+        records.
+
+        Between the uniform case and the most skewed case above, there are many
+        other distributions whose first-order moment is the required 1,000
+        records but with varying second-order moments. An adversarial case when
+        applying the non-clustering index is any distribution where larger
+        batches of records on values of B are likely to be chosen given the
+        particular query on B. To underperform the scan, the union of the sets
+        of records gathered by the equality selections must exceed 100,000.
+    \end{enumerate}
+
+    \begin{problemcopy} \item Suppose that each of relations R, S, T, V, W has
+        A as its only key. Which of the following queries may output a
+        different number of records if DISTINCT is removed? Prove your answer.
+    \end{problemcopy}
+
+    \begin{enumerate}[a.]
+        \begin{problemcopy}
+        \item \texttt{SELECT DISTINCT R.A, S.A \\
+            FROM R, A \\
+            WHERE R.B = S.C}
+        \end{problemcopy}
+
+        DISTINCT is unnecessary since both R and S are privileged relations.
+
+        \begin{problemcopy}
+        \item \texttt{SELECT DISTINCT R.A \\
+            FROM R, S \\
+            WHERE R.B = S.C}
+        \end{problemcopy}
+
+        DISTINCT is necessary since only R is privileged and S does not reach
+        R.
+
+        \begin{problemcopy}
+        \item \texttt{SELECT DISTINCT R.A \\
+            FROM R, S
+            WHERE R.B = S.A}
+        \end{problemcopy}
+
+        DISTINCT is unnecessary since R is privileged and S REACHES R.
+
+        \begin{problemcopy}
+        \item \texttt{SELECT DISTINCT R.A \\
+            FROM R, S, T, V, W \\
+            WHERE R.B = S.A \\
+            AND R.D = T.D \\
+            AND R.C = V.A \\
+            AND T.A = S.B \\
+            AND W.A = S.D}
+        \end{problemcopy}
+
+        DISTINCT is unnecessary since R is privileged, S REACHES R, V REACHES
+        R, T REACHES S, W REACHES S. The REACHES relation is transitive, so all
+        unprivileged tables S, T, V, W reach R.
+
+        \begin{problemcopy}
+        \item \texttt{SELECT DISTINCT R.A \\
+            FROM R, S, T \\
+            WHERE R.B = T.A \\
+            AND R.B = S.C}
+        \end{problemcopy}
+
+        DISTINCT is necessary since R is privileged and T REACHES R. Relation S
+        is unprivileged and does not reach R.
+
+    \end{enumerate}
+
+    \begin{problemcopy} \item Suppose that the following four transactions are
+        the only ones that execute during some interval (R stands for read, W
+        for write, and different letter arguments represent different data
+        items).
+
+        \texttt{%
+          T1: R(A) W(B) R(C) W(D) \\
+          T2: W(A) W(C) \\
+          T3: R(D) R(B) \\
+          T4: R(A) R(E)%
+        }
+    \end{problemcopy}
+
+    \begin{enumerate}[a.]
+        \begin{problemcopy}
+        \item What is the finest chopping of T1 assuming that its reads and
+          writes cannot be reordered? Show the chopping.
+        \end{problemcopy}
+
+        The finest chopping of T1 when its reads and writes cannot be reordered
+        is
+
+        \begin{center}
+          \framebox{\texttt{R(A) W(B) R(C) W(D)}}\hspace{1mm}.
+        \end{center}
+        \vspace{1em}
+
+        The reason that T1 cannot be chopped is that insertion of a single
+        \textsl{sibling} edge will split at least one of the pairs of
+        operations (\texttt{R(A), R(C)}) or (\texttt{W(B), W(D)}), leading to
+        an SC cycle between at least one of
+        \begin{equation*}
+          \text{(\texttt{T11--T2--T12--T11}) or (\texttt{T11--T3--T12--T11}).}
+        \end{equation*}
+
+        \begin{problemcopy}
+        \item What is the finest chopping of T1 assuming that its reads and
+          writes can be reordered? Show the reordering, then the chopping.
+        \end{problemcopy}
+
+        The finest chopping of T1 when reads and writes can be reordered is
+
+        \begin{center}
+          T1$^*$ = \framebox{\texttt{R(A) R(C) W(B) W(D)}} \\
+          \vspace{2mm}
+          T11 = \framebox{\texttt{R(A) R(C)}}\hspace{1mm},\hspace{2mm}
+          T12 = \framebox{\texttt{W(B) W(D)}}\hspace{1mm}.
+        \end{center}
+        \vspace{1em}
+
+        The reason that T1 may be chopped no further is that any further
+        chopping of T11 introduces an SC cycle
+        \begin{equation*}
+          \text{(\texttt{T111--T2--T112--T111})\phantom{.}}
+        \end{equation*}
+        and any further chopping of T12 introduces an SC cycle
+        \begin{equation*}
+          \text{(\texttt{T121--T3--T122--T121}).}
+        \end{equation*}
+
+        \begin{problemcopy}
+        \item Can any other transactions be chopped?
+        \end{problemcopy}
+
+        T2 cannot be chopped because it introduces an SC cycle \texttt{(T1--T21--T22--T1)}.
+        \vspace{0.5em}
+
+        T3 cannot be chopped because it introduces an SC cycle \texttt{(T1--T31--T32--T1)}.
+        \vspace{0.5em}
+
+        T4 can be chopped into
+        T41 = \framebox{\texttt{R(A)}}\hspace{1mm},\hspace{2mm}
+        T42 = \framebox{\texttt{R(E)}}\hspace{2mm}\vspace{1mm}
+        since T42 has no conflict with any other transaction, and so there is
+        no way to complete an SC cycle.
+
+    \end{enumerate}
+
+\end{enumerate}
+
+\end{document}
+
