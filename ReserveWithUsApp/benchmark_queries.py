@@ -1,7 +1,9 @@
 '''
-Run ReserveWithUsApp benchmarks using Python.
+Run ReserveWithUsApp benchmarks using Python. 
 '''
 import subprocess
+import argparse
+import StringIO
 import time
 import csv
 import numpy as np
@@ -19,7 +21,7 @@ class Timer(object):
         return self
 
 
-    def __exit__(self, exc_type, value, traceback):
+    def __exit__(self, type, value, traceback):
         self._t_stop = time.time()
 
     @property
@@ -313,6 +315,68 @@ def mode_test_i_rooms(rwu_jar_path, num_queries):
                     i+1, num_queries, timer.elapsed, len(result) - 3)
 
     return rooms_times
+
+
+def mode_test_i_checkout(rwu_jar_path, num_queries):
+    '''
+    login
+        
+    rand(1, 10) for number of items to add to cart
+    until cart filled
+        search for random room, if result not empty add to cart
+    begin timer, checkout, end timer
+    add time to results
+    
+    logout
+    
+    login(customer_id)
+    logout(customer_id)
+    add_to_shopping_cart(shopping_cart_item) - shopping_cart_item
+    checkout(customer_id)
+    '''
+    
+    customer_id = 0
+
+    rand_country_city = RandomUniformCountryCity()
+    
+    rand_date_range = RandomLogNormalDateRange()
+
+    times = []
+
+    for i in range(num_queries):
+        items = np.random.randint(1, 10)
+    
+        added = 0
+        
+        s = ('command=login&customer_id={}').format(customer_id)
+        customer_id = customer_id + 1
+    
+        while added < items:
+            country, city = rand_country_city.get_country_city()
+            date_start, date_stop = rand_date_range.get_date_range()
+            query = ('command=search_rooms&country={}&city={}&'
+                'date_start={}&date_stop={}&numrooms=1').format(country, city, date_start, date_stop)
+
+            result = send_commands([query, 'command=get_rooms'], timeout=20)
+            # First line is nonsense, last is 'bye'.
+            if len(result) > 2:
+                print result[1]
+                bookit_fields = result[1].split('|')
+                query = ('command=add_to_shopping_cart&customer_id={}&date_start={}&' +
+                    'date_stop={}&numtaken={}&room_type_id={}&total_price={}').format(
+                        customer_id, date_start, date_stop, 1, bookit_fields[0], bookit_fields[-1])
+                added += 1
+
+        # Complete checkout.
+        with Timer() as timer:
+            result = send_commands([query, 'command=checkout'], timeout=20)
+        times.append(timer.elapsed)
+
+        # Logout user
+        s = ('command=logout&customer_id={}').format(customer_id)
+        send_commands([s], timeout=20)
+
+    return times
 
 def test_simple(rwu_jar_path):
     ''' Run simple test command to ensure DB2 is operational. '''

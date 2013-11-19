@@ -47,3 +47,4 @@ target/
 
 # Temporary
 .*.swp
+*.DS_STORE

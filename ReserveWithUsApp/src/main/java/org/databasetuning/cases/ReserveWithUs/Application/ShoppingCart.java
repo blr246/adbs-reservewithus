@@ -108,6 +108,16 @@ class ShoppingCart {
      }
 
     public synchronized void checkout() throws SQLException, InterruptedException {
+        Connection con = this.session.open();
+	con.setAutoCommit(false);
+	String sql_stmt = DB2SQLStatements.new_checkout(this.customer_id);
+	Statement stmt = con.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+	ResultSet res = stmt.executeQuery(sql_stmt);
+	con.commit();
+	this.session.close(con);
+    }
+
+    public synchronized void oldCheckout() throws SQLException, InterruptedException {
         // First, get all items for this customer_id and create connection
         Connection con = this.session.open(); // might generate an Error - remains unchecked
         con.setAutoCommit(false);

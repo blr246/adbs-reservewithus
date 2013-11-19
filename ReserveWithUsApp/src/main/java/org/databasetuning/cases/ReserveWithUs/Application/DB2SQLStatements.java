@@ -77,6 +77,10 @@ class DB2SQLStatements {
                     sci.getTotal_price()+","+status+")";
     }
 
+    public static String new_checkout(int customer_id) {
+        return "update ROOM_DATE rda set rda.numtaken = ( select rda.numtaken + sum(sc.numtaken) from shopping_cart sc where rda.room_type_id = sc.room_type_id and rda.single_day_date >= sc.date_start and rda.single_day_date < sc.date_stop and sc.customer_id = " + customer_id + ") where (rda.room_type_id, rda.single_day_date) in (select rda.room_type_id, rda.single_day_date from shopping cart sc, room_date rda where rda.single_day_date >= sc.date_start and rda.single_day_date < sc.date_stop and rda.room_type_id = sc.room_type_id and sc.customer_id = " + customer_id + ")";
+    }
+
     // Room_date update
     public static String room_date_update(ShoppingCartItem sci){
         return "update ROOM_DATE set numtaken = numtaken + "+sci.getNumtaken()+
